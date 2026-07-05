@@ -35,7 +35,7 @@ export default function Header() {
         </Link>
         {/* Cart as Add to Cart Button */}
         <Link href="/cart">
-          <Image src="/images/cartt.png" alt="Cart" width={140} height={32} className="cursor-pointer" />
+          <Image src="/images/cart.png" alt="Cart" width={40} height={400} className="cursor-pointer" />
         </Link>
       </div>
     </header>
