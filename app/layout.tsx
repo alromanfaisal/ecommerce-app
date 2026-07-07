@@ -1,6 +1,6 @@
 
-import Header from "./componrnts/common/header";
-import Footer from "./componrnts/common/footer";
+import Header from "./components/common/header";
+import Footer from "./components/common/footer";
 import Collection from "./collection/page";
 import NewArrivals from "./new_arival/page";
 import "./globals.css";
