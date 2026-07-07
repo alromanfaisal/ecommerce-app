@@ -1,16 +1,16 @@
+// app/login/page.tsx
 'use client';
-
-import { useState } from "react";
+import { useState, FormEvent } from "react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // ⚠️ placeholder only — see note below about real auth
     alert(`Email: ${email}, Password: ${password}`);
   };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-linear-to-r from-indigo-500 via-purple-500 to-pink-500">
       <div className="bg-white p-8 rounded-xl shadow-lg w-96">
