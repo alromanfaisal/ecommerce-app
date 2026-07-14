@@ -5,18 +5,25 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
+import { useToast } from "../context/ToastContext";
 
 export default function CartPage() {
   const { items, totalPrice, increaseQty, decreaseQty, removeItem } = useCart();
+  const { showToast } = useToast();
   const router = useRouter();
+
+  const handleRemove = (id: number, name: string) => {
+    removeItem(id);
+    showToast(`${name} removed from cart`, "error");
+  };
 
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <h1 className="text-2xl font-bold mb-2">আপনার কার্ট খালি</h1>
-        <p className="text-gray-500 mb-6">এখনো কিছু যোগ করা হয়নি।</p>
+        <h1 className="text-2xl font-bold mb-2">Your cart is empty</h1>
+        <p className="text-gray-500 mb-6">You have not added anything to your cart yet.</p>
         <Link href="/collection" className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-medium">
-          কেনাকাটা শুরু করুন
+          Start Shopping
         </Link>
       </div>
     );
@@ -35,7 +42,7 @@ export default function CartPage() {
 
             <div className="flex-1">
               <h3 className="font-semibold text-gray-800">{item.name}</h3>
-              <p className="text-sm text-gray-500">৳{item.price} × {item.quantity}</p>
+              <p className="text-sm text-gray-500">${item.price} × {item.quantity}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -54,10 +61,10 @@ export default function CartPage() {
               </button>
             </div>
 
-            <p className="w-20 text-right font-semibold">৳{item.price * item.quantity}</p>
+            <p className="w-20 text-right font-semibold">${item.price * item.quantity}</p>
 
             <button
-              onClick={() => removeItem(item.id)}
+              onClick={() => handleRemove(item.id, item.name)}
               className="text-red-500 hover:text-red-700 text-sm font-medium ml-2"
             >
               Remove
@@ -67,7 +74,7 @@ export default function CartPage() {
       </div>
 
       <div className="mt-8 flex items-center justify-between border-t pt-6">
-        <span className="text-xl font-bold">Total: ৳{totalPrice}</span>
+        <span className="text-xl font-bold">Total: ${totalPrice}</span>
         <button
           onClick={() => router.push("/checkout")}
           className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium transition"

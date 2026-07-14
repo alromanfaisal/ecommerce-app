@@ -4,18 +4,22 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Product } from "@/lib/products";
 import { useCart } from "../../context/CartContext";
+import { useToast } from "../../context/ToastContext";
 
 export default function ProductCard({ product }: { product: Product }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const { showToast } = useToast();
   const hasDiscount = typeof product.discountPrice === "number";
 
   const handleAddToCart = () => {
     addItem(product);
+    showToast("Added to cart successfully!");
   };
 
   const handleBuyNow = () => {
     addItem(product);
+    showToast("Redirecting to checkout...", "info");
     router.push("/checkout");
   };
 

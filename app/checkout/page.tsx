@@ -4,9 +4,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
+import { useToast } from "../context/ToastContext";
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
+  const { showToast } = useToast();
   const router = useRouter();
 
   const [name, setName] = useState("");
@@ -18,12 +20,12 @@ export default function CheckoutPage() {
     e.preventDefault();
     setPlacing(true);
 
-    // TODO: এখানে আসল অর্ডার Supabase এ সেভ করার লজিক বসবে (orders টেবিলে insert)
+    // TODO: এখানে আসল অর্ডার ব্যাকএন্ডে সেভ করার লজিক বসবে
     console.log("Order placed:", { name, phone, address, items, totalPrice });
 
     setTimeout(() => {
       clearCart();
-      alert("আপনার অর্ডার সফলভাবে সম্পন্ন হয়েছে!");
+      showToast("Order placed successfully!");
       router.push("/");
     }, 800);
   };
@@ -31,8 +33,8 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-        <h1 className="text-2xl font-bold mb-2">কার্টে কিছু নেই</h1>
-        <p className="text-gray-500">চেকআউট করার আগে কার্টে প্রোডাক্ট যোগ করুন।</p>
+        <h1 className="text-2xl font-bold mb-2">Your cart is empty</h1>
+        <p className="text-gray-500">Add some products to your cart before checking out.</p>
       </div>
     );
   }
@@ -49,13 +51,13 @@ export default function CheckoutPage() {
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <span>{item.name} × {item.quantity}</span>
-                <span className="font-medium">৳{item.price * item.quantity}</span>
+                <span className="font-medium">${item.price * item.quantity}</span>
               </div>
             ))}
           </div>
           <div className="border-t mt-4 pt-4 flex justify-between font-bold">
             <span>Total</span>
-            <span>৳{totalPrice}</span>
+            <span>${totalPrice}</span>
           </div>
         </div>
 
