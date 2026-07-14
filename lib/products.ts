@@ -1,4 +1,8 @@
 // lib/products.ts
+// lib/products.ts এর একদম নিচে এই ফাংশনটা যোগ করুন
+export function getProductById(id: number): Product | undefined {
+  return ALL_PRODUCTS.find((p) => p.id === id);
+}
 export type Product = {
   id: number;
   name: string;

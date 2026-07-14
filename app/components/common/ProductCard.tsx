@@ -12,13 +12,13 @@ export default function ProductCard({ product }: { product: Product }) {
   const { showToast } = useToast();
   const hasDiscount = typeof product.discountPrice === "number";
 
-  const handleAddToCart = () => {
-    addItem(product);
+  const handleAddToCart = async () => {
+    await addItem(product);
     showToast("Added to cart successfully!");
   };
 
-  const handleBuyNow = () => {
-    addItem(product);
+  const handleBuyNow = async () => {
+    await addItem(product);
     showToast("Redirecting to checkout...", "info");
     router.push("/checkout");
   };
@@ -26,7 +26,7 @@ export default function ProductCard({ product }: { product: Product }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col justify-between hover:shadow-md transition">
       <div>
-        <div className="relative w-full h-[220px] overflow-hidden rounded-lg">
+        <div className="relative w-full aspect-[4/3] overflow-hidden rounded-lg">
           <Image src={product.image} alt={product.name} fill className="object-cover" />
           {product.isNew && (
             <span className="absolute top-2 left-2 bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
@@ -45,11 +45,11 @@ export default function ProductCard({ product }: { product: Product }) {
         <div className="mt-2 flex items-center gap-2">
           {hasDiscount ? (
             <>
-              <span className="text-lg font-bold text-red-600">৳{product.discountPrice}</span>
-              <span className="text-sm text-gray-400 line-through">৳{product.price}</span>
+              <span className="text-lg font-bold text-red-600">${product.discountPrice}</span>
+              <span className="text-sm text-gray-400 line-through">${product.price}</span>
             </>
           ) : (
-            <span className="text-lg font-bold text-gray-800">৳{product.price}</span>
+            <span className="text-lg font-bold text-gray-800">${product.price}</span>
           )}
         </div>
       </div>

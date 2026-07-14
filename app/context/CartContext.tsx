@@ -1,126 +1,226 @@
 // app/context/CartContext.tsx
 'use client';
 
-import { createContext, useContext, useEffect, useReducer, ReactNode } from "react";
-import { Product } from "@/lib/products";
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
+import { getProductById, Product } from "@/lib/products";
+import { useAuth } from "./AuthContext";
 
+const API_URL = "http://localhost:8080";
+
+// Frontend এ দেখানোর জন্য — product info যোগ করে দেওয়া হয়েছে lookup করে
 export type CartItem = {
+  cartItemId: number | null; // backend এ সেভ থাকা row এর id (guest হলে null)
+  productId: number;
+  quantity: number;
+  product: Product;
+};
+
+// Backend থেকে যেভাবে raw ডেটা আসে
+type RawCartItem = {
   id: number;
-  name: string;
-  image: string;
-  price: number; // discountPrice থাকলে সেটা, নাহলে regular price
+  product_id: number;
   quantity: number;
 };
 
-type CartState = {
-  items: CartItem[];
+// Guest cart এ localStorage এ যা সেভ থাকে
+type GuestCartItem = {
+  productId: number;
+  quantity: number;
 };
-
-type CartAction =
-  | { type: "ADD_ITEM"; product: Product }
-  | { type: "REMOVE_ITEM"; id: number }
-  | { type: "INCREASE_QTY"; id: number }
-  | { type: "DECREASE_QTY"; id: number }
-  | { type: "CLEAR_CART" }
-  | { type: "LOAD_CART"; items: CartItem[] };
-
-function cartReducer(state: CartState, action: CartAction): CartState {
-  switch (action.type) {
-    case "ADD_ITEM": {
-      const existing = state.items.find((item) => item.id === action.product.id);
-      if (existing) {
-        return {
-          items: state.items.map((item) =>
-            item.id === action.product.id ? { ...item, quantity: item.quantity + 1 } : item
-          ),
-        };
-      }
-      const price = action.product.discountPrice ?? action.product.price;
-      return {
-        items: [
-          ...state.items,
-          { id: action.product.id, name: action.product.name, image: action.product.image, price, quantity: 1 },
-        ],
-      };
-    }
-    case "REMOVE_ITEM":
-      return { items: state.items.filter((item) => item.id !== action.id) };
-
-    case "INCREASE_QTY":
-      return {
-        items: state.items.map((item) =>
-          item.id === action.id ? { ...item, quantity: item.quantity + 1 } : item
-        ),
-      };
-
-    case "DECREASE_QTY":
-      return {
-        items: state.items
-          .map((item) => (item.id === action.id ? { ...item, quantity: item.quantity - 1 } : item))
-          .filter((item) => item.quantity > 0),
-      };
-
-    case "CLEAR_CART":
-      return { items: [] };
-
-    case "LOAD_CART":
-      return { items: action.items };
-
-    default:
-      return state;
-  }
-}
 
 type CartContextType = {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
-  addItem: (product: Product) => void;
-  removeItem: (id: number) => void;
-  increaseQty: (id: number) => void;
-  decreaseQty: (id: number) => void;
-  clearCart: () => void;
+  isLoading: boolean;
+  addItem: (product: Product) => Promise<void>;
+  removeItem: (productId: number) => Promise<void>;
+  increaseQty: (productId: number) => Promise<void>;
+  decreaseQty: (productId: number) => Promise<void>;
+  clearCart: () => Promise<void>;
 };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const STORAGE_KEY = "my-store-cart";
+const GUEST_CART_KEY = "my-store-guest-cart";
+
+function loadGuestCart(): GuestCartItem[] {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveGuestCart(items: GuestCartItem[]) {
+  localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
+}
+
+function toDisplayItems(raw: { productId: number; quantity: number; cartItemId: number | null }[]): CartItem[] {
+  return raw
+    .map((r) => {
+      const product = getProductById(r.productId);
+      if (!product) return null;
+      return { cartItemId: r.cartItemId, productId: r.productId, quantity: r.quantity, product };
+    })
+    .filter((item): item is CartItem => item !== null);
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, { items: [] });
+  const { token, isLoading: authLoading } = useAuth();
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const previousToken = useRef<string | null>(null);
 
-  // প্রথমবার লোড হওয়ার সময় localStorage থেকে কার্ট পড়ে আনা
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        dispatch({ type: "LOAD_CART", items: JSON.parse(saved) });
-      }
-    } catch (err) {
-      console.error("Failed to load cart from storage:", err);
-    }
-  }, []);
+  const authHeaders = (): HeadersInit => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  });
 
-  // প্রতিবার state বদলালে localStorage এ সেভ করা
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
-  }, [state.items]);
-
-  const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = state.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-  const value: CartContextType = {
-    items: state.items,
-    totalItems,
-    totalPrice,
-    addItem: (product) => dispatch({ type: "ADD_ITEM", product }),
-    removeItem: (id) => dispatch({ type: "REMOVE_ITEM", id }),
-    increaseQty: (id) => dispatch({ type: "INCREASE_QTY", id }),
-    decreaseQty: (id) => dispatch({ type: "DECREASE_QTY", id }),
-    clearCart: () => dispatch({ type: "CLEAR_CART" }),
+  // Backend থেকে fresh cart লোড করা
+  const fetchServerCart = async () => {
+    const res = await fetch(`${API_URL}/api/cart`, { headers: authHeaders() });
+    if (!res.ok) throw new Error("Failed to fetch cart");
+    const raw: RawCartItem[] = await res.json();
+    setItems(
+      toDisplayItems(
+        raw.map((r) => ({ productId: r.product_id, quantity: r.quantity, cartItemId: r.id }))
+      )
+    );
   };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+  // Guest cart (localStorage) থেকে লোড করা
+  const loadFromGuestStorage = () => {
+    const guest = loadGuestCart();
+    setItems(
+      toDisplayItems(guest.map((g) => ({ productId: g.productId, quantity: g.quantity, cartItemId: null })))
+    );
+  };
+
+  useEffect(() => {
+    if (authLoading) return; // AuthContext এখনো localStorage থেকে session লোড করছে, অপেক্ষা করি
+
+    const run = async () => {
+      setIsLoading(true);
+
+      const justLoggedIn = !previousToken.current && token;
+
+      if (token && justLoggedIn) {
+        // ইউজার এইমাত্র লগইন করলো — guest cart এর আইটেমগুলো backend এ merge করি
+        const guestItems = loadGuestCart();
+        for (const g of guestItems) {
+          for (let i = 0; i < g.quantity; i++) {
+            await fetch(`${API_URL}/api/cart`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ product_id: g.productId }),
+            });
+          }
+        }
+        localStorage.removeItem(GUEST_CART_KEY); // merge শেষ, guest cart খালি করে দেওয়া
+        await fetchServerCart();
+      } else if (token) {
+        await fetchServerCart();
+      } else {
+        loadFromGuestStorage();
+      }
+
+      previousToken.current = token;
+      setIsLoading(false);
+    };
+
+    run().catch((err) => {
+      console.error("Cart load failed:", err);
+      setIsLoading(false);
+    });
+  }, [token, authLoading]);
+
+  const addItem = async (product: Product) => {
+    if (token) {
+      await fetch(`${API_URL}/api/cart`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ product_id: product.id }),
+      });
+      await fetchServerCart();
+    } else {
+      const guest = loadGuestCart();
+      const existing = guest.find((g) => g.productId === product.id);
+      if (existing) {
+        existing.quantity += 1;
+      } else {
+        guest.push({ productId: product.id, quantity: 1 });
+      }
+      saveGuestCart(guest);
+      loadFromGuestStorage();
+    }
+  };
+
+  const removeItem = async (productId: number) => {
+    if (token) {
+      const item = items.find((i) => i.productId === productId);
+      if (!item?.cartItemId) return;
+      await fetch(`${API_URL}/api/cart/${item.cartItemId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      await fetchServerCart();
+    } else {
+      const guest = loadGuestCart().filter((g) => g.productId !== productId);
+      saveGuestCart(guest);
+      loadFromGuestStorage();
+    }
+  };
+
+  const updateQty = async (productId: number, delta: number) => {
+    if (token) {
+      const item = items.find((i) => i.productId === productId);
+      if (!item?.cartItemId) return;
+      const newQty = item.quantity + delta;
+      await fetch(`${API_URL}/api/cart/${item.cartItemId}`, {
+        method: "PUT",
+        headers: authHeaders(),
+        body: JSON.stringify({ quantity: newQty }),
+      });
+      await fetchServerCart();
+    } else {
+      const guest = loadGuestCart();
+      const existing = guest.find((g) => g.productId === productId);
+      if (!existing) return;
+      existing.quantity += delta;
+      const filtered = guest.filter((g) => g.quantity > 0);
+      saveGuestCart(filtered);
+      loadFromGuestStorage();
+    }
+  };
+
+  const increaseQty = (productId: number) => updateQty(productId, 1);
+  const decreaseQty = (productId: number) => updateQty(productId, -1);
+
+  const clearCart = async () => {
+    if (token) {
+      await fetch(`${API_URL}/api/cart`, { method: "DELETE", headers: authHeaders() });
+      setItems([]);
+    } else {
+      localStorage.removeItem(GUEST_CART_KEY);
+      setItems([]);
+    }
+  };
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = items.reduce((sum, item) => {
+    const price = item.product.discountPrice ?? item.product.price;
+    return sum + price * item.quantity;
+  }, 0);
+
+  return (
+    <CartContext.Provider
+      value={{ items, totalItems, totalPrice, isLoading, addItem, removeItem, increaseQty, decreaseQty, clearCart }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
 }
 
 export function useCart() {

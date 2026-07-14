@@ -7,7 +7,7 @@ import { useCart } from "../context/CartContext";
 import { useToast } from "../context/ToastContext";
 
 export default function CheckoutPage() {
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, totalPrice, clearCart, isLoading } = useCart();
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -16,19 +16,27 @@ export default function CheckoutPage() {
   const [address, setAddress] = useState("");
   const [placing, setPlacing] = useState(false);
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setPlacing(true);
 
-    // TODO: এখানে আসল অর্ডার ব্যাকএন্ডে সেভ করার লজিক বসবে
+    // TODO: এখানে আসল অর্ডার ব্যাকএন্ডে (orders টেবিলে) সেভ করার লজিক বসবে
     console.log("Order placed:", { name, phone, address, items, totalPrice });
 
-    setTimeout(() => {
-      clearCart();
+    setTimeout(async () => {
+      await clearCart();
       showToast("Order placed successfully!");
       router.push("/");
     }, 800);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-400">Loading...</p>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -44,16 +52,18 @@ export default function CheckoutPage() {
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Order Summary */}
         <div className="bg-gray-50 rounded-xl p-6 order-2 md:order-1">
           <h2 className="font-semibold text-lg mb-4">Order Summary</h2>
           <div className="space-y-3">
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm">
-                <span>{item.name} × {item.quantity}</span>
-                <span className="font-medium">${item.price * item.quantity}</span>
-              </div>
-            ))}
+            {items.map((item) => {
+              const price = item.product.discountPrice ?? item.product.price;
+              return (
+                <div key={item.productId} className="flex justify-between text-sm">
+                  <span>{item.product.name} × {item.quantity}</span>
+                  <span className="font-medium">${price * item.quantity}</span>
+                </div>
+              );
+            })}
           </div>
           <div className="border-t mt-4 pt-4 flex justify-between font-bold">
             <span>Total</span>
@@ -61,7 +71,6 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Shipping Form */}
         <form onSubmit={handlePlaceOrder} className="space-y-4 order-1 md:order-2">
           <input
             type="text"
