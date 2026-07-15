@@ -27,7 +27,9 @@ export default function ProductCard({ product }: { product: Product }) {
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col justify-between hover:shadow-md transition">
       <div>
         <div className="relative w-full aspect-[4/3] overflow-hidden rounded-lg">
-          <Image src={product.image_url} alt={product.name} fill className="object-cover" />
+          <Image src={product.image_url} alt={product.name} fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            className="object-cover"
+            />
           {product.is_new && (
             <span className="absolute top-2 left-2 bg-green-600 text-white text-xs font-semibold px-2 py-1 rounded-full">
               NEW

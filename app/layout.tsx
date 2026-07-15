@@ -6,6 +6,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./context/ToastContext";
 import "./globals.css";
+<html lang="en" suppressHydrationWarning></html>
 
 export const metadata: Metadata = {
   title: "Your Store Name",
