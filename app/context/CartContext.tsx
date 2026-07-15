@@ -2,27 +2,22 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
-import { getProductById, Product } from "@/lib/products";
+import { getAllProducts, Product, API_URL } from "@/lib/api";
 import { useAuth } from "./AuthContext";
 
-const API_URL = "http://localhost:8080";
-
-// Frontend এ দেখানোর জন্য — product info যোগ করে দেওয়া হয়েছে lookup করে
 export type CartItem = {
-  cartItemId: number | null; // backend এ সেভ থাকা row এর id (guest হলে null)
+  cartItemId: number | null;
   productId: number;
   quantity: number;
   product: Product;
 };
 
-// Backend থেকে যেভাবে raw ডেটা আসে
 type RawCartItem = {
   id: number;
   product_id: number;
   quantity: number;
 };
 
-// Guest cart এ localStorage এ যা সেভ থাকে
 type GuestCartItem = {
   productId: number;
   quantity: number;
@@ -57,57 +52,64 @@ function saveGuestCart(items: GuestCartItem[]) {
   localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
 }
 
-function toDisplayItems(raw: { productId: number; quantity: number; cartItemId: number | null }[]): CartItem[] {
-  return raw
-    .map((r) => {
-      const product = getProductById(r.productId);
-      if (!product) return null;
-      return { cartItemId: r.cartItemId, productId: r.productId, quantity: r.quantity, product };
-    })
-    .filter((item): item is CartItem => item !== null);
-}
-
 export function CartProvider({ children }: { children: ReactNode }) {
   const { token, isLoading: authLoading } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const previousToken = useRef<string | null>(null);
+  const productsCache = useRef<Product[]>([]); // প্রোডাক্ট লিস্ট একবার fetch করে মেমোরিতে রাখা
+
+  const getProductsCache = async (): Promise<Product[]> => {
+    if (productsCache.current.length === 0) {
+      productsCache.current = await getAllProducts();
+    }
+    return productsCache.current;
+  };
 
   const authHeaders = (): HeadersInit => ({
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
   });
 
-  // Backend থেকে fresh cart লোড করা
+  const toDisplayItems = async (
+    raw: { productId: number; quantity: number; cartItemId: number | null }[]
+  ): Promise<CartItem[]> => {
+    const products = await getProductsCache();
+    return raw
+      .map((r) => {
+        const product = products.find((p) => p.id === r.productId);
+        if (!product) return null;
+        return { cartItemId: r.cartItemId, productId: r.productId, quantity: r.quantity, product };
+      })
+      .filter((item): item is CartItem => item !== null);
+  };
+
   const fetchServerCart = async () => {
     const res = await fetch(`${API_URL}/api/cart`, { headers: authHeaders() });
     if (!res.ok) throw new Error("Failed to fetch cart");
     const raw: RawCartItem[] = await res.json();
-    setItems(
-      toDisplayItems(
-        raw.map((r) => ({ productId: r.product_id, quantity: r.quantity, cartItemId: r.id }))
-      )
+    const displayItems = await toDisplayItems(
+      raw.map((r) => ({ productId: r.product_id, quantity: r.quantity, cartItemId: r.id }))
     );
+    setItems(displayItems);
   };
 
-  // Guest cart (localStorage) থেকে লোড করা
-  const loadFromGuestStorage = () => {
+  const loadFromGuestStorage = async () => {
     const guest = loadGuestCart();
-    setItems(
-      toDisplayItems(guest.map((g) => ({ productId: g.productId, quantity: g.quantity, cartItemId: null })))
+    const displayItems = await toDisplayItems(
+      guest.map((g) => ({ productId: g.productId, quantity: g.quantity, cartItemId: null }))
     );
+    setItems(displayItems);
   };
 
   useEffect(() => {
-    if (authLoading) return; // AuthContext এখনো localStorage থেকে session লোড করছে, অপেক্ষা করি
+    if (authLoading) return;
 
     const run = async () => {
       setIsLoading(true);
-
       const justLoggedIn = !previousToken.current && token;
 
       if (token && justLoggedIn) {
-        // ইউজার এইমাত্র লগইন করলো — guest cart এর আইটেমগুলো backend এ merge করি
         const guestItems = loadGuestCart();
         for (const g of guestItems) {
           for (let i = 0; i < g.quantity; i++) {
@@ -118,12 +120,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
             });
           }
         }
-        localStorage.removeItem(GUEST_CART_KEY); // merge শেষ, guest cart খালি করে দেওয়া
+        localStorage.removeItem(GUEST_CART_KEY);
         await fetchServerCart();
       } else if (token) {
         await fetchServerCart();
       } else {
-        loadFromGuestStorage();
+        await loadFromGuestStorage();
       }
 
       previousToken.current = token;
@@ -153,7 +155,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         guest.push({ productId: product.id, quantity: 1 });
       }
       saveGuestCart(guest);
-      loadFromGuestStorage();
+      await loadFromGuestStorage();
     }
   };
 
@@ -161,15 +163,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (token) {
       const item = items.find((i) => i.productId === productId);
       if (!item?.cartItemId) return;
-      await fetch(`${API_URL}/api/cart/${item.cartItemId}`, {
-        method: "DELETE",
-        headers: authHeaders(),
-      });
+      await fetch(`${API_URL}/api/cart/${item.cartItemId}`, { method: "DELETE", headers: authHeaders() });
       await fetchServerCart();
     } else {
       const guest = loadGuestCart().filter((g) => g.productId !== productId);
       saveGuestCart(guest);
-      loadFromGuestStorage();
+      await loadFromGuestStorage();
     }
   };
 
@@ -191,7 +190,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       existing.quantity += delta;
       const filtered = guest.filter((g) => g.quantity > 0);
       saveGuestCart(filtered);
-      loadFromGuestStorage();
+      await loadFromGuestStorage();
     }
   };
 
@@ -210,7 +209,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => {
-    const price = item.product.discountPrice ?? item.product.price;
+    const price = item.product.discount_price ?? item.product.price;
     return sum + price * item.quantity;
   }, 0);
 

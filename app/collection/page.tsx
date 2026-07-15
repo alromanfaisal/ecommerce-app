@@ -1,10 +1,11 @@
 // app/collection/page.tsx
-'use client';
 import Link from "next/link";
-import { ALL_PRODUCTS } from "@/lib/products";
+import { getAllProducts } from "@/lib/api";
 import ProductCard from "../components/common/ProductCard";
 
-export default function CollectionPage() {
+export default async function CollectionPage() {
+  const products = await getAllProducts();
+
   return (
     <section className="px-6 py-12 bg-white min-h-screen">
       <div className="mb-6">
@@ -13,7 +14,7 @@ export default function CollectionPage() {
       <h1 className="text-3xl font-bold mb-2">All Collections</h1>
       <p className="text-gray-500 mb-10">Explore our entire catalogue of premium items.</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        {ALL_PRODUCTS.map((product) => (
+        {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
       </div>

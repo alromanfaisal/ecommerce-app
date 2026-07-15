@@ -43,11 +43,11 @@ export default function CartPage() {
 
       <div className="space-y-4">
         {items.map((item) => {
-          const price = item.product.discountPrice ?? item.product.price;
+          const price = item.product.discount_price ?? item.product.price;
           return (
             <div key={item.productId} className="flex items-center gap-4 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
               <div className="relative w-28 h-20 rounded-lg overflow-hidden flex-shrink-0">
-                <Image src={item.product.image} alt={item.product.name} fill className="object-cover" />
+                <Image src={item.product.image_url} alt={item.product.name} fill className="object-cover" />
               </div>
 
               <div className="flex-1">
@@ -56,19 +56,9 @@ export default function CartPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => decreaseQty(item.productId)}
-                  className="w-8 h-8 border rounded-md hover:bg-gray-100 font-bold"
-                >
-                  −
-                </button>
+                <button onClick={() => decreaseQty(item.productId)} className="w-8 h-8 border rounded-md hover:bg-gray-100 font-bold">−</button>
                 <span className="w-6 text-center">{item.quantity}</span>
-                <button
-                  onClick={() => increaseQty(item.productId)}
-                  className="w-8 h-8 border rounded-md hover:bg-gray-100 font-bold"
-                >
-                  +
-                </button>
+                <button onClick={() => increaseQty(item.productId)} className="w-8 h-8 border rounded-md hover:bg-gray-100 font-bold">+</button>
               </div>
 
               <p className="w-20 text-right font-semibold">${price * item.quantity}</p>

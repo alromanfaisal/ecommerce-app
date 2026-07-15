@@ -56,7 +56,7 @@ export default function CheckoutPage() {
           <h2 className="font-semibold text-lg mb-4">Order Summary</h2>
           <div className="space-y-3">
             {items.map((item) => {
-              const price = item.product.discountPrice ?? item.product.price;
+              const price = item.product.discount_price ?? item.product.price;
               return (
                 <div key={item.productId} className="flex justify-between text-sm">
                   <span>{item.product.name} × {item.quantity}</span>

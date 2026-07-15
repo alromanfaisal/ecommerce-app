@@ -1,11 +1,11 @@
 // app/new-arrivals/page.tsx
-'use client';
 import Link from "next/link";
-import { ALL_PRODUCTS } from "@/lib/products";
+import { getAllProducts } from "@/lib/api";
 import ProductCard from "../components/common/ProductCard";
 
-export default function NewArrivalsPage() {
-  const newProducts = ALL_PRODUCTS.filter((p) => p.isNew);
+export default async function NewArrivalsPage() {
+  const products = await getAllProducts();
+  const newProducts = products.filter((p) => p.is_new);
 
   return (
     <section className="px-6 py-12 bg-white min-h-screen">

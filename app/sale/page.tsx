@@ -1,11 +1,11 @@
 // app/sale/page.tsx
-'use client';
 import Link from "next/link";
-import { ALL_PRODUCTS } from "@/lib/products";
+import { getAllProducts } from "@/lib/api";
 import ProductCard from "../components/common/ProductCard";
 
-export default function SalePage() {
-  const saleProducts = ALL_PRODUCTS.filter((p) => typeof p.discountPrice === "number");
+export default async function SalePage() {
+  const products = await getAllProducts();
+  const saleProducts = products.filter((p) => typeof p.discount_price === "number");
 
   return (
     <section className="px-6 py-12 bg-white min-h-screen">
