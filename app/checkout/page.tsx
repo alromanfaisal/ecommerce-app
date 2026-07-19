@@ -4,10 +4,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+
+const API_URL = "http://localhost:8080";
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart, isLoading } = useCart();
+  const { token, isLoading: authLoading } = useAuth();
   const { showToast } = useToast();
   const router = useRouter();
 
@@ -18,19 +22,46 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!token) {
+      showToast("Please log in to place an order", "error");
+      router.push("/login");
+      return;
+    }
+
     setPlacing(true);
 
-    // TODO: এখানে আসল অর্ডার ব্যাকএন্ডে (orders টেবিলে) সেভ করার লজিক বসবে
-    console.log("Order placed:", { name, phone, address, items, totalPrice });
+    try {
+      const res = await fetch(`${API_URL}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          customer_name: name,
+          phone,
+          address,
+        }),
+      });
 
-    setTimeout(async () => {
-      await clearCart();
+      if (!res.ok) {
+        const errorText = await res.text();
+        showToast(errorText || "Failed to place order. Please try again.", "error");
+        setPlacing(false);
+        return;
+      }
+
+      await clearCart(); // frontend cart state ও খালি করে দেওয়া (backend cart তো order handler নিজেই খালি করেছে)
       showToast("Order placed successfully!");
-      router.push("/");
-    }, 800);
+      router.push("/orders");
+    } catch (err) {
+      showToast("Could not connect to server. Is the backend running?", "error");
+      setPlacing(false);
+    }
   };
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-400">Loading...</p>
