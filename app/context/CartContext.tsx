@@ -2,7 +2,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
-import { getAllProducts, Product, API_URL } from "@/lib/api";
+import { getAllProducts, Product, API_URL, authFetch } from "@/lib/api";
 import { useAuth } from "./AuthContext";
 
 export type CartItem = {
@@ -57,7 +57,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const previousToken = useRef<string | null>(null);
-  const productsCache = useRef<Product[]>([]); // প্রোডাক্ট লিস্ট একবার fetch করে মেমোরিতে রাখা
+  const productsCache = useRef<Product[]>([]);
 
   const getProductsCache = async (): Promise<Product[]> => {
     if (productsCache.current.length === 0) {
@@ -85,8 +85,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchServerCart = async () => {
-    const res = await fetch(`${API_URL}/api/cart`, { headers: authHeaders() });
-    if (!res.ok) throw new Error("Failed to fetch cart");
+    const res = await authFetch(`${API_URL}/api/cart`, { headers: authHeaders() });
+    if (!res.ok) {
+      throw new Error("Failed to fetch cart");
+    }
     const raw: RawCartItem[] = await res.json();
     const displayItems = await toDisplayItems(
       raw.map((r) => ({ productId: r.product_id, quantity: r.quantity, cartItemId: r.id }))
@@ -113,7 +115,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const guestItems = loadGuestCart();
         for (const g of guestItems) {
           for (let i = 0; i < g.quantity; i++) {
-            await fetch(`${API_URL}/api/cart`, {
+            await authFetch(`${API_URL}/api/cart`, {
               method: "POST",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
               body: JSON.stringify({ product_id: g.productId }),
@@ -140,7 +142,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = async (product: Product) => {
     if (token) {
-      await fetch(`${API_URL}/api/cart`, {
+      await authFetch(`${API_URL}/api/cart`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ product_id: product.id }),
@@ -163,7 +165,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (token) {
       const item = items.find((i) => i.productId === productId);
       if (!item?.cartItemId) return;
-      await fetch(`${API_URL}/api/cart/${item.cartItemId}`, { method: "DELETE", headers: authHeaders() });
+      await authFetch(`${API_URL}/api/cart/${item.cartItemId}`, { method: "DELETE", headers: authHeaders() });
       await fetchServerCart();
     } else {
       const guest = loadGuestCart().filter((g) => g.productId !== productId);
@@ -177,7 +179,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const item = items.find((i) => i.productId === productId);
       if (!item?.cartItemId) return;
       const newQty = item.quantity + delta;
-      await fetch(`${API_URL}/api/cart/${item.cartItemId}`, {
+      await authFetch(`${API_URL}/api/cart/${item.cartItemId}`, {
         method: "PUT",
         headers: authHeaders(),
         body: JSON.stringify({ quantity: newQty }),
@@ -199,7 +201,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clearCart = async () => {
     if (token) {
-      await fetch(`${API_URL}/api/cart`, { method: "DELETE", headers: authHeaders() });
+      await authFetch(`${API_URL}/api/cart`, { method: "DELETE", headers: authHeaders() });
       setItems([]);
     } else {
       localStorage.removeItem(GUEST_CART_KEY);

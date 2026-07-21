@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+import { API_URL, authFetch } from "@/lib/api";
 
 export default function CheckoutPage() {
   const { items, totalPrice, clearCart, isLoading } = useCart();
@@ -32,7 +31,7 @@ export default function CheckoutPage() {
     setPlacing(true);
 
     try {
-      const res = await fetch(`${API_URL}/api/orders`, {
+      const res = await authFetch(`${API_URL}/api/orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -52,7 +51,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      await clearCart(); // frontend cart state ও খালি করে দেওয়া (backend cart তো order handler নিজেই খালি করেছে)
+      await clearCart();
       showToast("Order placed successfully!");
       router.push("/orders");
     } catch (err) {

@@ -35,7 +35,6 @@ export default function SignupPage() {
       showToast("Account created successfully! Please log in.");
       router.push("/login");
     } catch (err) {
-      // ব্যাকএন্ড সার্ভার বন্ধ থাকলে বা network সমস্যা হলে
       showToast("Could not connect to server. Is the backend running?", "error");
       setLoading(false);
     }

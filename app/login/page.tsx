@@ -5,6 +5,7 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
+import { API_URL } from "@/lib/api";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -19,7 +20,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8080/api/login", {
+      const res = await fetch(`${API_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

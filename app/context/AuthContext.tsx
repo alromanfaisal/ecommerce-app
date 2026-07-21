@@ -57,6 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
   };
+  // app/context/AuthContext.tsx এ AuthProvider ফাংশনের ভেতরে, logout() ফাংশনের নিচে যোগ করুন
+
+useEffect(() => {
+  const handleSessionExpired = () => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  };
+
+  window.addEventListener("session-expired", handleSessionExpired);
+  return () => window.removeEventListener("session-expired", handleSessionExpired);
+}, []);
 
   const updateUser = (updates: Partial<User>) => {
     setUser((prev) => {

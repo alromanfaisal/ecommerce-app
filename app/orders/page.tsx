@@ -5,8 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+import { API_URL, authFetch } from "@/lib/api";
 
 type OrderItem = {
   product_id: number;
@@ -43,7 +42,7 @@ export default function OrdersPage() {
 
     const fetchOrders = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/orders`, {
+        const res = await authFetch(`${API_URL}/api/orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch orders");
