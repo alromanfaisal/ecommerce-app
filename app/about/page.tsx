@@ -36,12 +36,13 @@ export default function AboutPage() {
             </p>
           </div>
           <div className="relative w-full h-[260px] rounded-xl overflow-hidden bg-gray-100">
-            <Image
-              src="/images/about-hero.png"
-              alt="Our dealership"
-              fill
-              className="object-cover"
-            />
+          <Image
+            src="/images/about.png"
+            alt="Our dealership"
+            fill
+            className="object-cover"
+          />
+            
           </div>
         </div>
 
